@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-터미널에 표시되는 주소를 데스크톱 Chrome, Edge 또는 Firefox에서 여세요. 기본 주소는 `http://localhost:5173`입니다. **내 세계로 들어가기**를 누르면 마우스가 게임 안에 잠깁니다. 브라우저가 허용을 요청하면 마우스 잠금을 허용하세요. HTML 파일을 직접 더블클릭하는 `file://` 실행은 지원하지 않습니다.
+터미널에 표시되는 주소를 데스크톱 Chrome, Edge 또는 Firefox에서 여세요. 기본 주소는 `http://localhost:5173/codex_test/`입니다. **내 세계로 들어가기**를 누르면 마우스가 게임 안에 잠깁니다. 브라우저가 허용을 요청하면 마우스 잠금을 허용하세요. HTML 파일을 직접 더블클릭하는 `file://` 실행은 지원하지 않습니다.
 
 Vite는 파일을 제공하는 개발 도구입니다. 게임 자체에는 서버 연결이 없습니다. 최초 의존성 설치 후에는 폰트·이미지·Three.js를 CDN에서 가져오지 않습니다. 로컬 서버가 켜져 있으면 인터넷 없이 플레이할 수 있습니다.
 
@@ -55,7 +55,39 @@ npm run build
 npm run preview
 ```
 
-`npm test`는 지형 생성, 고속 낙하, 점프와 공중 점프 제한, 벽·천장 충돌, 대각선 이동 속도, 광선 거리와 음수 좌표, 플레이어 겹침, 월드 초기화를 검증합니다. `npm run build`는 `dist/`에 정적 파일을 생성하고 `npm run preview`는 해당 빌드를 로컬에서 확인합니다. 배포는 자동으로 수행하지 않습니다.
+`npm test`는 지형 생성, 고속 낙하, 점프와 공중 점프 제한, 벽·천장 충돌, 대각선 이동 속도, 광선 거리와 음수 좌표, 플레이어 겹침, 월드 초기화를 검증합니다. `npm run build`는 `dist/`에 정적 파일을 생성하고 `npm run preview`는 해당 빌드를 로컬에서 확인합니다. 미리보기 기본 경로는 `http://localhost:4173/codex_test/`입니다. 로컬 빌드는 배포하지 않으며, GitHub에서는 아래 워크플로가 `main` 반영 시 자동으로 배포합니다.
+
+## GitHub Pages 배포
+
+Vite 설정은 `vite.config.js`에 있고, 프로젝트 Pages 경로인 `/codex_test/`를 `base`로 사용합니다. 저장소 이름이나 배포 경로가 바뀌면 이 값도 변경하세요. 예상 사이트 주소는 `https://gh38.github.io/codex_test/`이며, 실제 배포가 완료된 주소는 Actions의 배포 결과에서 확인하세요.
+
+### GitHub에서 한 번 설정할 항목
+
+1. 저장소 **Settings → Pages → Build and deployment → Source**에서 **GitHub Actions**를 선택합니다. 브랜치의 `/docs` 폴더를 배포하는 방식은 사용하지 않습니다.
+2. 저장소에서 Actions가 비활성화되어 있다면 활성화합니다. 조직 정책이 있는 경우 워크플로에 사용된 공식 `actions/*` 실행을 허용해야 합니다.
+3. 이 변경의 PR을 검토하고 직접 `main`에 병합합니다. 워크플로가 테스트·빌드에 성공하면 `dist`를 Pages에 배포합니다. `github-pages` 환경에 배포 승인 규칙이 있다면 승인도 필요합니다.
+
+개인 토큰이나 별도 배포 키는 필요하지 않습니다. 워크플로는 저장소 읽기 권한을 사용하고, 배포 작업에만 `pages: write`, `id-token: write` 권한을 부여합니다. 생성된 `dist/`는 Git에 커밋하지 않습니다.
+
+### 자동 실행 범위
+
+- `main`으로 보내는 PR: `npm ci` → `npm test` → `npm run build` → `dist` 아티팩트 업로드. 실제 사이트는 배포하지 않습니다.
+- `main`에 push 또는 PR 병합: 같은 검증 이후 GitHub Pages에 배포합니다. 테스트나 빌드 실패 시 배포하지 않습니다.
+- 수동 실행: **Actions → Test and deploy GitHub Pages → Run workflow**에서 `main`을 선택합니다. 다른 브랜치를 선택하면 검증만 실행합니다.
+
+### 배포 후 확인
+
+**Actions**에서 build와 deploy가 모두 성공했는지 확인한 뒤 deploy 작업에 표시되는 사이트 주소를 여세요. 브라우저 개발자 도구의 Network에서 `/codex_test/assets/` 아래 JavaScript와 CSS가 200으로 로드되고 404가 없는지 확인합니다. Three.js는 JavaScript 번들에 포함되며, 블록 텍스처는 브라우저 Canvas로 생성하므로 별도 CDN·3D 모델·이미지 다운로드가 없습니다.
+
+시작 화면의 지형·나무가 보이는지 확인하고 시작 → 이동·점프 → 블록 파괴·설치 → Esc → 계속하기·다시 시작 순서로 플레이하세요. Console의 JavaScript/WebGL 오류도 확인합니다. 이 PR을 `main`에 병합하기 전에는 실제 Pages 자동 배포와 공개 사이트 상태를 검증할 수 없습니다.
+
+### Pages 구성에서 확인한 결과
+
+- `npm ci`, 자동 테스트 8개, `npm run build`, `npm audit` 통과. 알려진 의존성 취약점 0건.
+- 공식 actionlint 1.7.7로 `.github/workflows/deploy.yml` 검사 통과.
+- 로컬의 배포용 빌드를 `/codex_test/` 경로로 제공해 HTML·JavaScript·CSS의 HTTP 200과 올바른 리소스 경로 확인.
+- Chromium에서 WebGL 2 화면과 지형·블록 텍스처 렌더링, 이동·점프·블록 편집·메뉴 조작 확인. 페이지 실행 오류·리소스 요청 실패 0건.
+- GitHub Actions의 실제 배포 실행과 공개 Pages 사이트 검증은 GitHub 설정 및 `main` 병합 후 진행해야 합니다.
 
 WebGL을 지원하고 하드웨어 가속이 켜진 데스크톱 브라우저를 권장합니다. WebGL 초기화에 실패하면 안내 메시지를 표시합니다. 게임 화면에서 시작 → 이동·점프 → 블록 파괴·설치 → Esc → 계속하기 → 다시 시작 순서로 수동 확인할 수 있습니다.
 
